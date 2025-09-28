@@ -610,9 +610,6 @@ class TaskManager {
   }
 
   saveTasks() {
-      case 'dashboard':
-        app.innerHTML = this.renderDashboard();
-        break;
     localStorage.setItem('tasks', JSON.stringify(this.tasks));
   }
 }
