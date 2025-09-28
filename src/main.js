@@ -617,5 +617,4 @@ class TaskManager {
 // Initialize the application
 document.addEventListener('DOMContentLoaded', () => {
   new TaskManager();
-    this.tasks = ['Finish homework', 'Call John', 'Buy groceries'];
 });
