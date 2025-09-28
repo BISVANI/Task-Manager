@@ -54,6 +54,9 @@ class TaskManager {
           case 'login':
             this.handleLogin();
             break;
+          case 'signup':
+            this.handleSignup();
+            break;
         }
       }
     });
@@ -69,6 +72,9 @@ class TaskManager {
       } else if (e.target.matches('#login-form')) {
         e.preventDefault();
         this.handleLogin();
+      } else if (e.target.matches('#signup-form')) {
+        e.preventDefault();
+        this.handleSignup();
       }
     });
   }
@@ -145,8 +151,26 @@ class TaskManager {
     return `
       <div class="auth-container">
         <div class="auth-content">
-          <h1 class="auth-title">Sign Up</h1>
-          <p class="auth-subtitle">Create your account to get started</p>
+          <h1 class="auth-title">Create Account</h1>
+          <form id="signup-form" class="auth-form">
+            <div class="form-group">
+              <label for="name" class="form-label">Name</label>
+              <input type="text" id="name" name="name" class="form-input" required placeholder="Enter your full name">
+            </div>
+            
+            <div class="form-group">
+              <label for="signup-email" class="form-label">Email</label>
+              <input type="email" id="signup-email" name="email" class="form-input" required placeholder="Enter your email">
+            </div>
+            
+            <div class="form-group">
+              <label for="signup-password" class="form-label">Password</label>
+              <input type="password" id="signup-password" name="password" class="form-input" required placeholder="Create a password">
+            </div>
+            
+            <button type="submit" class="btn btn-primary btn-large btn-full">Sign Up</button>
+          </form>
+          
           <div class="auth-links">
             <p>Already have an account? <a href="#" data-action="show-login" class="auth-link">Login</a></p>
             <p><a href="#" data-action="show-home" class="auth-link">← Back to Home</a></p>
@@ -503,6 +527,21 @@ class TaskManager {
     // Simple validation - in a real app, this would connect to a backend
     if (email && password) {
       console.log('Login attempt:', { email, password });
+      // For demo purposes, just redirect to dashboard
+      this.showDashboard();
+    }
+  }
+
+  handleSignup() {
+    const form = document.getElementById('signup-form');
+    const formData = new FormData(form);
+    const name = formData.get('name');
+    const email = formData.get('email');
+    const password = formData.get('password');
+    
+    // Simple validation - in a real app, this would connect to a backend
+    if (name && email && password) {
+      console.log('Signup attempt:', { name, email, password });
       // For demo purposes, just redirect to dashboard
       this.showDashboard();
     }
