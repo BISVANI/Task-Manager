@@ -33,6 +33,15 @@ class TaskManager {
           case 'show-dashboard':
             this.showDashboard();
             break;
+          case 'add-task':
+            this.addTask();
+            break;
+          case 'logout':
+            this.logout();
+            break;
+          case 'show-dashboard':
+            this.showDashboard();
+            break;
           case 'show-add-task':
             this.showAddTask();
             break;
@@ -75,6 +84,9 @@ class TaskManager {
       } else if (e.target.matches('#signup-form')) {
         e.preventDefault();
         this.handleSignup();
+      } else if (e.target.matches('#task-form')) {
+        e.preventDefault();
+        this.addTask();
       }
     });
   }
@@ -180,6 +192,35 @@ class TaskManager {
     `;
   }
 
+  renderDashboard() {
+    return `
+      <div class="dashboard-container">
+        <div class="dashboard-content">
+          <h1 class="dashboard-title">Your Tasks</h1>
+          
+          <div class="task-list-container">
+            <ul class="task-list">
+              ${this.tasks.map(task => `<li class="task-item">${task}</li>`).join('')}
+            </ul>
+          </div>
+          
+          <form id="task-form" class="task-form">
+            <div class="task-input-group">
+              <div class="form-group">
+                <label for="new-task" class="form-label">New Task</label>
+                <input type="text" id="new-task" name="new-task" class="form-input" required placeholder="Enter a new task">
+              </div>
+              <button type="submit" class="btn btn-primary btn-large">Add Task</button>
+            </div>
+          </form>
+          
+          <div class="dashboard-actions">
+            <button class="btn btn-secondary btn-large" data-action="logout">Logout</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
   renderNavigation() {
     return `
       <nav class="nav">
@@ -439,6 +480,10 @@ class TaskManager {
     this.editingTaskId = null;
     this.render();
   }
+  showDashboard() {
+    this.currentView = 'dashboard';
+    this.render();
+  }
 
   showDashboard() {
     this.currentView = 'dashboard';
@@ -527,7 +572,7 @@ class TaskManager {
     // Simple validation - in a real app, this would connect to a backend
     if (email && password) {
       console.log('Login attempt:', { email, password });
-      // For demo purposes, just redirect to dashboard
+      // For demo purposes, redirect to dashboard
       this.showDashboard();
     }
   }
@@ -542,12 +587,32 @@ class TaskManager {
     // Simple validation - in a real app, this would connect to a backend
     if (name && email && password) {
       console.log('Signup attempt:', { name, email, password });
-      // For demo purposes, just redirect to dashboard
+      // For demo purposes, redirect to dashboard
       this.showDashboard();
     }
   }
 
+  addTask() {
+    const form = document.getElementById('task-form');
+    const formData = new FormData(form);
+    const newTask = formData.get('new-task');
+    
+    if (newTask && newTask.trim()) {
+      this.tasks.push(newTask.trim());
+      form.reset();
+      this.render();
+    }
+  }
+
+  logout() {
+    this.tasks = ['Finish homework', 'Call John', 'Buy groceries']; // Reset to default tasks
+    this.showHome();
+  }
+
   saveTasks() {
+      case 'dashboard':
+        app.innerHTML = this.renderDashboard();
+        break;
     localStorage.setItem('tasks', JSON.stringify(this.tasks));
   }
 }
@@ -555,4 +620,5 @@ class TaskManager {
 // Initialize the application
 document.addEventListener('DOMContentLoaded', () => {
   new TaskManager();
+    this.tasks = ['Finish homework', 'Call John', 'Buy groceries'];
 });
