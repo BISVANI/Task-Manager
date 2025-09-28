@@ -1,0 +1,405 @@
+import './style.css'
+
+// Task Manager Application
+class TaskManager {
+  constructor() {
+    this.tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+    this.currentView = 'dashboard';
+    this.editingTaskId = null;
+    this.init();
+  }
+
+  init() {
+    this.render();
+    this.bindEvents();
+  }
+
+  bindEvents() {
+    document.addEventListener('click', (e) => {
+      if (e.target.matches('[data-action]')) {
+        const action = e.target.dataset.action;
+        const taskId = e.target.dataset.taskId;
+        
+        switch (action) {
+          case 'show-dashboard':
+            this.showDashboard();
+            break;
+          case 'show-add-task':
+            this.showAddTask();
+            break;
+          case 'add-task':
+            this.addTask();
+            break;
+          case 'edit-task':
+            this.editTask(taskId);
+            break;
+          case 'delete-task':
+            this.deleteTask(taskId);
+            break;
+          case 'toggle-complete':
+            this.toggleComplete(taskId);
+            break;
+          case 'cancel-edit':
+            this.showDashboard();
+            break;
+        }
+      }
+    });
+
+    document.addEventListener('submit', (e) => {
+      if (e.target.matches('#task-form')) {
+        e.preventDefault();
+        if (this.editingTaskId) {
+          this.updateTask();
+        } else {
+          this.addTask();
+        }
+      }
+    });
+  }
+
+  render() {
+    const app = document.getElementById('app');
+    
+    switch (this.currentView) {
+      case 'dashboard':
+        app.innerHTML = this.renderDashboard();
+        break;
+      case 'add-task':
+        app.innerHTML = this.renderAddTask();
+        break;
+      case 'edit-task':
+        app.innerHTML = this.renderEditTask();
+        break;
+    }
+  }
+
+  renderNavigation() {
+    return `
+      <nav class="nav">
+        <div class="nav-container">
+          <a href="#" class="nav-brand" data-action="show-dashboard">Task Manager</a>
+          <ul class="nav-links">
+            <li><a href="#" class="nav-link ${this.currentView === 'dashboard' ? 'active' : ''}" data-action="show-dashboard">Dashboard</a></li>
+            <li><a href="#" class="nav-link ${this.currentView === 'add-task' ? 'active' : ''}" data-action="show-add-task">Add Task</a></li>
+          </ul>
+        </div>
+      </nav>
+    `;
+  }
+
+  renderDashboard() {
+    const completedTasks = this.tasks.filter(task => task.completed).length;
+    const pendingTasks = this.tasks.filter(task => !task.completed).length;
+    const highPriorityTasks = this.tasks.filter(task => task.priority === 'high' && !task.completed).length;
+
+    return `
+      ${this.renderNavigation()}
+      
+      <div class="hero">
+        <div class="container">
+          <h1>Task Manager Dashboard</h1>
+          <p class="text-muted">Stay organized and productive with your personal task management system</p>
+        </div>
+      </div>
+
+      <div class="container">
+        <div class="card">
+          <div class="flex justify-between align-center mb-0">
+            <h2>Task Overview</h2>
+            <button class="btn btn-primary" data-action="show-add-task">Add New Task</button>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: var(--spacing-lg); margin-bottom: var(--spacing-xl);">
+          <div class="card text-center">
+            <h3 style="color: var(--primary-button); font-size: 2rem; margin-bottom: var(--spacing-sm);">${this.tasks.length}</h3>
+            <p class="text-muted mb-0">Total Tasks</p>
+          </div>
+          <div class="card text-center">
+            <h3 style="color: #28a745; font-size: 2rem; margin-bottom: var(--spacing-sm);">${completedTasks}</h3>
+            <p class="text-muted mb-0">Completed</p>
+          </div>
+          <div class="card text-center">
+            <h3 style="color: #ffc107; font-size: 2rem; margin-bottom: var(--spacing-sm);">${pendingTasks}</h3>
+            <p class="text-muted mb-0">Pending</p>
+          </div>
+          <div class="card text-center">
+            <h3 style="color: #dc3545; font-size: 2rem; margin-bottom: var(--spacing-sm);">${highPriorityTasks}</h3>
+            <p class="text-muted mb-0">High Priority</p>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Your Tasks</h2>
+          ${this.tasks.length === 0 ? 
+            `<div class="text-center" style="padding: var(--spacing-2xl);">
+              <p class="text-muted" style="font-size: 1.125rem;">No tasks yet. Create your first task to get started!</p>
+              <button class="btn btn-primary mt-lg" data-action="show-add-task">Create First Task</button>
+            </div>` :
+            `<ul class="task-list">
+              ${this.tasks.map(task => this.renderTaskItem(task)).join('')}
+            </ul>`
+          }
+        </div>
+      </div>
+
+      ${this.renderFooter()}
+    `;
+  }
+
+  renderTaskItem(task) {
+    const priorityClass = `priority-${task.priority}`;
+    const completedClass = task.completed ? 'task-completed' : '';
+    const statusBadge = task.completed ? 'completed' : (task.status || 'pending');
+
+    return `
+      <li class="task-item ${priorityClass} ${completedClass}">
+        <div class="task-content">
+          <div class="task-title">${task.title}</div>
+          ${task.description ? `<div class="task-description">${task.description}</div>` : ''}
+          <div class="task-meta">
+            <span class="status-badge status-${statusBadge}">${statusBadge}</span>
+            <span>Priority: ${task.priority}</span>
+            <span>Due: ${task.dueDate || 'No due date'}</span>
+          </div>
+        </div>
+        <div class="task-actions">
+          <button class="btn btn-sm btn-secondary" data-action="toggle-complete" data-task-id="${task.id}">
+            ${task.completed ? 'Undo' : 'Complete'}
+          </button>
+          <button class="btn btn-sm btn-primary" data-action="edit-task" data-task-id="${task.id}">Edit</button>
+          <button class="btn btn-sm btn-danger" data-action="delete-task" data-task-id="${task.id}">Delete</button>
+        </div>
+      </li>
+    `;
+  }
+
+  renderAddTask() {
+    return `
+      ${this.renderNavigation()}
+      
+      <div class="hero">
+        <div class="container-form">
+          <h1>Add New Task</h1>
+          <p class="text-muted">Create a new task to stay organized and productive</p>
+        </div>
+      </div>
+
+      <div class="container-form">
+        <div class="card">
+          <form id="task-form">
+            <div class="form-group">
+              <label for="title" class="form-label">Task Title *</label>
+              <input type="text" id="title" name="title" class="form-input" required placeholder="Enter task title">
+            </div>
+
+            <div class="form-group">
+              <label for="description" class="form-label">Description</label>
+              <textarea id="description" name="description" class="form-textarea" placeholder="Enter task description (optional)"></textarea>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--spacing-lg);">
+              <div class="form-group">
+                <label for="priority" class="form-label">Priority</label>
+                <select id="priority" name="priority" class="form-select">
+                  <option value="low">Low</option>
+                  <option value="medium" selected>Medium</option>
+                  <option value="high">High</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="status" class="form-label">Status</label>
+                <select id="status" name="status" class="form-select">
+                  <option value="pending" selected>Pending</option>
+                  <option value="in-progress">In Progress</option>
+                  <option value="completed">Completed</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="dueDate" class="form-label">Due Date</label>
+                <input type="date" id="dueDate" name="dueDate" class="form-input">
+              </div>
+            </div>
+
+            <div class="flex gap-md mt-lg">
+              <button type="submit" class="btn btn-primary">Create Task</button>
+              <button type="button" class="btn btn-secondary" data-action="show-dashboard">Cancel</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      ${this.renderFooter()}
+    `;
+  }
+
+  renderEditTask() {
+    const task = this.tasks.find(t => t.id === this.editingTaskId);
+    if (!task) return this.renderDashboard();
+
+    return `
+      ${this.renderNavigation()}
+      
+      <div class="hero">
+        <div class="container-form">
+          <h1>Edit Task</h1>
+          <p class="text-muted">Update your task details</p>
+        </div>
+      </div>
+
+      <div class="container-form">
+        <div class="card">
+          <form id="task-form">
+            <div class="form-group">
+              <label for="title" class="form-label">Task Title *</label>
+              <input type="text" id="title" name="title" class="form-input" required value="${task.title}">
+            </div>
+
+            <div class="form-group">
+              <label for="description" class="form-label">Description</label>
+              <textarea id="description" name="description" class="form-textarea">${task.description || ''}</textarea>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--spacing-lg);">
+              <div class="form-group">
+                <label for="priority" class="form-label">Priority</label>
+                <select id="priority" name="priority" class="form-select">
+                  <option value="low" ${task.priority === 'low' ? 'selected' : ''}>Low</option>
+                  <option value="medium" ${task.priority === 'medium' ? 'selected' : ''}>Medium</option>
+                  <option value="high" ${task.priority === 'high' ? 'selected' : ''}>High</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="status" class="form-label">Status</label>
+                <select id="status" name="status" class="form-select">
+                  <option value="pending" ${task.status === 'pending' ? 'selected' : ''}>Pending</option>
+                  <option value="in-progress" ${task.status === 'in-progress' ? 'selected' : ''}>In Progress</option>
+                  <option value="completed" ${task.status === 'completed' ? 'selected' : ''}>Completed</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="dueDate" class="form-label">Due Date</label>
+                <input type="date" id="dueDate" name="dueDate" class="form-input" value="${task.dueDate || ''}">
+              </div>
+            </div>
+
+            <div class="flex gap-md mt-lg">
+              <button type="submit" class="btn btn-primary">Update Task</button>
+              <button type="button" class="btn btn-secondary" data-action="show-dashboard">Cancel</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      ${this.renderFooter()}
+    `;
+  }
+
+  renderFooter() {
+    return `
+      <footer class="footer">
+        <div class="footer-content">
+          <p class="footer-text">© 2025 Task Manager. Built with modern web technologies.</p>
+          <ul class="footer-links">
+            <li><a href="#" class="footer-link">Privacy Policy</a></li>
+            <li><a href="#" class="footer-link">Terms of Service</a></li>
+            <li><a href="#" class="footer-link">Support</a></li>
+            <li><a href="#" class="footer-link">About</a></li>
+          </ul>
+        </div>
+      </footer>
+    `;
+  }
+
+  showDashboard() {
+    this.currentView = 'dashboard';
+    this.editingTaskId = null;
+    this.render();
+  }
+
+  showAddTask() {
+    this.currentView = 'add-task';
+    this.editingTaskId = null;
+    this.render();
+  }
+
+  addTask() {
+    const form = document.getElementById('task-form');
+    const formData = new FormData(form);
+    
+    const task = {
+      id: Date.now().toString(),
+      title: formData.get('title'),
+      description: formData.get('description'),
+      priority: formData.get('priority'),
+      status: formData.get('status'),
+      dueDate: formData.get('dueDate'),
+      completed: formData.get('status') === 'completed',
+      createdAt: new Date().toISOString()
+    };
+
+    this.tasks.push(task);
+    this.saveTasks();
+    this.showDashboard();
+  }
+
+  editTask(taskId) {
+    this.editingTaskId = taskId;
+    this.currentView = 'edit-task';
+    this.render();
+  }
+
+  updateTask() {
+    const form = document.getElementById('task-form');
+    const formData = new FormData(form);
+    
+    const taskIndex = this.tasks.findIndex(t => t.id === this.editingTaskId);
+    if (taskIndex !== -1) {
+      this.tasks[taskIndex] = {
+        ...this.tasks[taskIndex],
+        title: formData.get('title'),
+        description: formData.get('description'),
+        priority: formData.get('priority'),
+        status: formData.get('status'),
+        dueDate: formData.get('dueDate'),
+        completed: formData.get('status') === 'completed',
+        updatedAt: new Date().toISOString()
+      };
+      
+      this.saveTasks();
+      this.showDashboard();
+    }
+  }
+
+  deleteTask(taskId) {
+    if (confirm('Are you sure you want to delete this task?')) {
+      this.tasks = this.tasks.filter(t => t.id !== taskId);
+      this.saveTasks();
+      this.render();
+    }
+  }
+
+  toggleComplete(taskId) {
+    const task = this.tasks.find(t => t.id === taskId);
+    if (task) {
+      task.completed = !task.completed;
+      task.status = task.completed ? 'completed' : 'pending';
+      this.saveTasks();
+      this.render();
+    }
+  }
+
+  saveTasks() {
+    localStorage.setItem('tasks', JSON.stringify(this.tasks));
+  }
+}
+
+// Initialize the application
+document.addEventListener('DOMContentLoaded', () => {
+  new TaskManager();
+});
