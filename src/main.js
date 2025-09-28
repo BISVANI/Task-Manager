@@ -4,7 +4,7 @@ import './style.css'
 class TaskManager {
   constructor() {
     this.tasks = JSON.parse(localStorage.getItem('tasks')) || [];
-    this.currentView = 'dashboard';
+    this.currentView = 'home';
     this.editingTaskId = null;
     this.init();
   }
@@ -21,6 +21,15 @@ class TaskManager {
         const taskId = e.target.dataset.taskId;
         
         switch (action) {
+          case 'show-home':
+            this.showHome();
+            break;
+          case 'show-login':
+            this.showLogin();
+            break;
+          case 'show-signup':
+            this.showSignup();
+            break;
           case 'show-dashboard':
             this.showDashboard();
             break;
@@ -42,6 +51,9 @@ class TaskManager {
           case 'cancel-edit':
             this.showDashboard();
             break;
+          case 'login':
+            this.handleLogin();
+            break;
         }
       }
     });
@@ -54,6 +66,9 @@ class TaskManager {
         } else {
           this.addTask();
         }
+      } else if (e.target.matches('#login-form')) {
+        e.preventDefault();
+        this.handleLogin();
       }
     });
   }
@@ -62,6 +77,15 @@ class TaskManager {
     const app = document.getElementById('app');
     
     switch (this.currentView) {
+      case 'home':
+        app.innerHTML = this.renderHome();
+        break;
+      case 'login':
+        app.innerHTML = this.renderLogin();
+        break;
+      case 'signup':
+        app.innerHTML = this.renderSignup();
+        break;
       case 'dashboard':
         app.innerHTML = this.renderDashboard();
         break;
@@ -72,6 +96,64 @@ class TaskManager {
         app.innerHTML = this.renderEditTask();
         break;
     }
+  }
+
+  renderHome() {
+    return `
+      <div class="home-container">
+        <div class="home-content">
+          <h1 class="home-title">Welcome to My Task Manager</h1>
+          <div class="home-buttons">
+            <button class="btn btn-primary btn-large" data-action="show-login">Login</button>
+            <button class="btn btn-primary btn-large" data-action="show-signup">Signup</button>
+            <button class="btn btn-primary btn-large" data-action="show-dashboard">Go to Dashboard</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  renderLogin() {
+    return `
+      <div class="auth-container">
+        <div class="auth-content">
+          <h1 class="auth-title">Login</h1>
+          <form id="login-form" class="auth-form">
+            <div class="form-group">
+              <label for="email" class="form-label">Email</label>
+              <input type="email" id="email" name="email" class="form-input" required placeholder="Enter your email">
+            </div>
+            
+            <div class="form-group">
+              <label for="password" class="form-label">Password</label>
+              <input type="password" id="password" name="password" class="form-input" required placeholder="Enter your password">
+            </div>
+            
+            <button type="submit" class="btn btn-primary btn-large btn-full">Login</button>
+          </form>
+          
+          <div class="auth-links">
+            <p>Don't have an account? <a href="#" data-action="show-signup" class="auth-link">Sign up</a></p>
+            <p><a href="#" data-action="show-home" class="auth-link">← Back to Home</a></p>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  renderSignup() {
+    return `
+      <div class="auth-container">
+        <div class="auth-content">
+          <h1 class="auth-title">Sign Up</h1>
+          <p class="auth-subtitle">Create your account to get started</p>
+          <div class="auth-links">
+            <p>Already have an account? <a href="#" data-action="show-login" class="auth-link">Login</a></p>
+            <p><a href="#" data-action="show-home" class="auth-link">← Back to Home</a></p>
+          </div>
+        </div>
+      </div>
+    `;
   }
 
   renderNavigation() {
@@ -316,6 +398,24 @@ class TaskManager {
     `;
   }
 
+  showHome() {
+    this.currentView = 'home';
+    this.editingTaskId = null;
+    this.render();
+  }
+
+  showLogin() {
+    this.currentView = 'login';
+    this.editingTaskId = null;
+    this.render();
+  }
+
+  showSignup() {
+    this.currentView = 'signup';
+    this.editingTaskId = null;
+    this.render();
+  }
+
   showDashboard() {
     this.currentView = 'dashboard';
     this.editingTaskId = null;
@@ -391,6 +491,20 @@ class TaskManager {
       task.status = task.completed ? 'completed' : 'pending';
       this.saveTasks();
       this.render();
+    }
+  }
+
+  handleLogin() {
+    const form = document.getElementById('login-form');
+    const formData = new FormData(form);
+    const email = formData.get('email');
+    const password = formData.get('password');
+    
+    // Simple validation - in a real app, this would connect to a backend
+    if (email && password) {
+      console.log('Login attempt:', { email, password });
+      // For demo purposes, just redirect to dashboard
+      this.showDashboard();
     }
   }
 
