@@ -1,17 +1,41 @@
 import './style.css'
+import { authService } from './authService';
 
-// Task Manager Application
 class TaskManager {
   constructor() {
     this.tasks = JSON.parse(localStorage.getItem('tasks')) || [];
     this.currentView = 'home';
     this.editingTaskId = null;
+    this.currentUser = null;
+    this.authSubscription = null;
     this.init();
   }
 
-  init() {
+  async init() {
+    await this.checkAuthState();
+    this.setupAuthListener();
     this.render();
     this.bindEvents();
+  }
+
+  async checkAuthState() {
+    const { user } = await authService.getCurrentUser();
+    this.currentUser = user;
+    if (user && this.currentView === 'home') {
+      this.currentView = 'dashboard';
+    }
+  }
+
+  setupAuthListener() {
+    this.authSubscription = authService.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN') {
+        this.currentUser = session?.user || null;
+        this.showDashboard();
+      } else if (event === 'SIGNED_OUT') {
+        this.currentUser = null;
+        this.showHome();
+      }
+    });
   }
 
   bindEvents() {
@@ -124,7 +148,6 @@ class TaskManager {
           <div class="home-buttons">
             <button class="btn btn-primary btn-large" data-action="show-login">Login</button>
             <button class="btn btn-primary btn-large" data-action="show-signup">Signup</button>
-            <button class="btn btn-primary btn-large" data-action="show-dashboard">Go to Dashboard</button>
           </div>
         </div>
       </div>
@@ -563,32 +586,43 @@ class TaskManager {
     }
   }
 
-  handleLogin() {
+  async handleLogin() {
     const form = document.getElementById('login-form');
     const formData = new FormData(form);
     const email = formData.get('email');
     const password = formData.get('password');
-    
-    // Simple validation - in a real app, this would connect to a backend
+
     if (email && password) {
-      console.log('Login attempt:', { email, password });
-      // For demo purposes, redirect to dashboard
-      this.showDashboard();
+      this.showLoadingMessage('Logging in...');
+      const { data, error } = await authService.signIn(email, password);
+
+      if (error) {
+        this.showErrorMessage(error);
+      } else {
+        this.currentUser = data.user;
+        this.showDashboard();
+      }
     }
   }
 
-  handleSignup() {
+  async handleSignup() {
     const form = document.getElementById('signup-form');
     const formData = new FormData(form);
     const name = formData.get('name');
     const email = formData.get('email');
     const password = formData.get('password');
-    
-    // Simple validation - in a real app, this would connect to a backend
+
     if (name && email && password) {
-      console.log('Signup attempt:', { name, email, password });
-      // For demo purposes, redirect to dashboard
-      this.showDashboard();
+      this.showLoadingMessage('Creating account...');
+      const { data, error } = await authService.signUp(email, password, name);
+
+      if (error) {
+        this.showErrorMessage(error);
+      } else {
+        this.currentUser = data.user;
+        this.showSuccessMessage('Account created successfully!');
+        setTimeout(() => this.showDashboard(), 1500);
+      }
     }
   }
 
@@ -604,9 +638,83 @@ class TaskManager {
     }
   }
 
-  logout() {
-    this.tasks = ['Finish homework', 'Call John', 'Buy groceries']; // Reset to default tasks
-    this.showHome();
+  async logout() {
+    const { error } = await authService.signOut();
+    if (error) {
+      this.showErrorMessage(error);
+    } else {
+      this.currentUser = null;
+      this.tasks = [];
+      this.showHome();
+    }
+  }
+
+  showLoadingMessage(message) {
+    const messageDiv = document.createElement('div');
+    messageDiv.id = 'message-notification';
+    messageDiv.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background-color: #2e81d1;
+      color: white;
+      padding: 16px 24px;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+      z-index: 1000;
+      font-weight: 600;
+    `;
+    messageDiv.textContent = message;
+    document.body.appendChild(messageDiv);
+  }
+
+  showErrorMessage(message) {
+    this.clearMessages();
+    const messageDiv = document.createElement('div');
+    messageDiv.id = 'message-notification';
+    messageDiv.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background-color: #dc3545;
+      color: white;
+      padding: 16px 24px;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+      z-index: 1000;
+      font-weight: 600;
+    `;
+    messageDiv.textContent = message;
+    document.body.appendChild(messageDiv);
+    setTimeout(() => this.clearMessages(), 5000);
+  }
+
+  showSuccessMessage(message) {
+    this.clearMessages();
+    const messageDiv = document.createElement('div');
+    messageDiv.id = 'message-notification';
+    messageDiv.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background-color: #28a745;
+      color: white;
+      padding: 16px 24px;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+      z-index: 1000;
+      font-weight: 600;
+    `;
+    messageDiv.textContent = message;
+    document.body.appendChild(messageDiv);
+    setTimeout(() => this.clearMessages(), 5000);
+  }
+
+  clearMessages() {
+    const existingMessage = document.getElementById('message-notification');
+    if (existingMessage) {
+      existingMessage.remove();
+    }
   }
 
   saveTasks() {
