@@ -21,9 +21,6 @@ class TaskManager {
   async checkAuthState() {
     const { user } = await authService.getCurrentUser();
     this.currentUser = user;
-    if (user && this.currentView === 'home') {
-      this.currentView = 'dashboard';
-    }
   }
 
   setupAuthListener() {
