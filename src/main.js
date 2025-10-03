@@ -1,38 +1,17 @@
 import './style.css'
-import { authService } from './authService';
 
+// Task Manager Application
 class TaskManager {
   constructor() {
     this.tasks = JSON.parse(localStorage.getItem('tasks')) || [];
     this.currentView = 'home';
     this.editingTaskId = null;
-    this.currentUser = null;
-    this.authSubscription = null;
     this.init();
   }
 
-  async init() {
-    await this.checkAuthState();
-    this.setupAuthListener();
+  init() {
     this.render();
     this.bindEvents();
-  }
-
-  async checkAuthState() {
-    const { user } = await authService.getCurrentUser();
-    this.currentUser = user;
-  }
-
-  setupAuthListener() {
-    this.authSubscription = authService.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN') {
-        this.currentUser = session?.user || null;
-        this.showDashboard();
-      } else if (event === 'SIGNED_OUT') {
-        this.currentUser = null;
-        this.showHome();
-      }
-    });
   }
 
   bindEvents() {
@@ -40,7 +19,7 @@ class TaskManager {
       if (e.target.matches('[data-action]')) {
         const action = e.target.dataset.action;
         const taskId = e.target.dataset.taskId;
-        
+
         switch (action) {
           case 'show-home':
             this.showHome();
@@ -114,7 +93,7 @@ class TaskManager {
 
   render() {
     const app = document.getElementById('app');
-    
+
     switch (this.currentView) {
       case 'home':
         app.innerHTML = this.renderHome();
@@ -145,6 +124,7 @@ class TaskManager {
           <div class="home-buttons">
             <button class="btn btn-primary btn-large" data-action="show-login">Login</button>
             <button class="btn btn-primary btn-large" data-action="show-signup">Signup</button>
+            <button class="btn btn-primary btn-large" data-action="show-dashboard">Go to Dashboard</button>
           </div>
         </div>
       </div>
@@ -161,15 +141,15 @@ class TaskManager {
               <label for="email" class="form-label">Email</label>
               <input type="email" id="email" name="email" class="form-input" required placeholder="Enter your email">
             </div>
-            
+
             <div class="form-group">
               <label for="password" class="form-label">Password</label>
               <input type="password" id="password" name="password" class="form-input" required placeholder="Enter your password">
             </div>
-            
+
             <button type="submit" class="btn btn-primary btn-large btn-full">Login</button>
           </form>
-          
+
           <div class="auth-links">
             <p>Don't have an account? <a href="#" data-action="show-signup" class="auth-link">Sign up</a></p>
             <p><a href="#" data-action="show-home" class="auth-link">← Back to Home</a></p>
@@ -189,20 +169,20 @@ class TaskManager {
               <label for="name" class="form-label">Name</label>
               <input type="text" id="name" name="name" class="form-input" required placeholder="Enter your full name">
             </div>
-            
+
             <div class="form-group">
               <label for="signup-email" class="form-label">Email</label>
               <input type="email" id="signup-email" name="email" class="form-input" required placeholder="Enter your email">
             </div>
-            
+
             <div class="form-group">
               <label for="signup-password" class="form-label">Password</label>
               <input type="password" id="signup-password" name="password" class="form-input" required placeholder="Create a password">
             </div>
-            
+
             <button type="submit" class="btn btn-primary btn-large btn-full">Sign Up</button>
           </form>
-          
+
           <div class="auth-links">
             <p>Already have an account? <a href="#" data-action="show-login" class="auth-link">Login</a></p>
             <p><a href="#" data-action="show-home" class="auth-link">← Back to Home</a></p>
@@ -217,13 +197,13 @@ class TaskManager {
       <div class="dashboard-container">
         <div class="dashboard-content">
           <h1 class="dashboard-title">Your Tasks</h1>
-          
+
           <div class="task-list-container">
             <ul class="task-list">
               ${this.tasks.map(task => `<li class="task-item">${task}</li>`).join('')}
             </ul>
           </div>
-          
+
           <form id="task-form" class="task-form">
             <div class="task-input-group">
               <div class="form-group">
@@ -233,7 +213,7 @@ class TaskManager {
               <button type="submit" class="btn btn-primary btn-large">Add Task</button>
             </div>
           </form>
-          
+
           <div class="dashboard-actions">
             <button class="btn btn-secondary btn-large" data-action="logout">Logout</button>
           </div>
@@ -262,7 +242,7 @@ class TaskManager {
 
     return `
       ${this.renderNavigation()}
-      
+
       <div class="hero">
         <div class="container">
           <h1>Task Manager Dashboard</h1>
@@ -299,7 +279,7 @@ class TaskManager {
 
         <div class="card">
           <h2>Your Tasks</h2>
-          ${this.tasks.length === 0 ? 
+          ${this.tasks.length === 0 ?
             `<div class="text-center" style="padding: var(--spacing-2xl);">
               <p class="text-muted" style="font-size: 1.125rem;">No tasks yet. Create your first task to get started!</p>
               <button class="btn btn-primary mt-lg" data-action="show-add-task">Create First Task</button>
@@ -345,7 +325,7 @@ class TaskManager {
   renderAddTask() {
     return `
       ${this.renderNavigation()}
-      
+
       <div class="hero">
         <div class="container-form">
           <h1>Add New Task</h1>
@@ -409,7 +389,7 @@ class TaskManager {
 
     return `
       ${this.renderNavigation()}
-      
+
       <div class="hero">
         <div class="container-form">
           <h1>Edit Task</h1>
@@ -520,7 +500,7 @@ class TaskManager {
   addTask() {
     const form = document.getElementById('task-form');
     const formData = new FormData(form);
-    
+
     const task = {
       id: Date.now().toString(),
       title: formData.get('title'),
@@ -546,7 +526,7 @@ class TaskManager {
   updateTask() {
     const form = document.getElementById('task-form');
     const formData = new FormData(form);
-    
+
     const taskIndex = this.tasks.findIndex(t => t.id === this.editingTaskId);
     if (taskIndex !== -1) {
       this.tasks[taskIndex] = {
@@ -559,7 +539,7 @@ class TaskManager {
         completed: formData.get('status') === 'completed',
         updatedAt: new Date().toISOString()
       };
-      
+
       this.saveTasks();
       this.showDashboard();
     }
@@ -583,43 +563,32 @@ class TaskManager {
     }
   }
 
-  async handleLogin() {
+  handleLogin() {
     const form = document.getElementById('login-form');
     const formData = new FormData(form);
     const email = formData.get('email');
     const password = formData.get('password');
 
+    // Simple validation - in a real app, this would connect to a backend
     if (email && password) {
-      this.showLoadingMessage('Logging in...');
-      const { data, error } = await authService.signIn(email, password);
-
-      if (error) {
-        this.showErrorMessage(error);
-      } else {
-        this.currentUser = data.user;
-        this.showDashboard();
-      }
+      console.log('Login attempt:', { email, password });
+      // For demo purposes, redirect to dashboard
+      this.showDashboard();
     }
   }
 
-  async handleSignup() {
+  handleSignup() {
     const form = document.getElementById('signup-form');
     const formData = new FormData(form);
     const name = formData.get('name');
     const email = formData.get('email');
     const password = formData.get('password');
 
+    // Simple validation - in a real app, this would connect to a backend
     if (name && email && password) {
-      this.showLoadingMessage('Creating account...');
-      const { data, error } = await authService.signUp(email, password, name);
-
-      if (error) {
-        this.showErrorMessage(error);
-      } else {
-        this.currentUser = data.user;
-        this.showSuccessMessage('Account created successfully!');
-        setTimeout(() => this.showDashboard(), 1500);
-      }
+      console.log('Signup attempt:', { name, email, password });
+      // For demo purposes, redirect to dashboard
+      this.showDashboard();
     }
   }
 
@@ -627,7 +596,7 @@ class TaskManager {
     const form = document.getElementById('task-form');
     const formData = new FormData(form);
     const newTask = formData.get('new-task');
-    
+
     if (newTask && newTask.trim()) {
       this.tasks.push(newTask.trim());
       form.reset();
@@ -635,83 +604,9 @@ class TaskManager {
     }
   }
 
-  async logout() {
-    const { error } = await authService.signOut();
-    if (error) {
-      this.showErrorMessage(error);
-    } else {
-      this.currentUser = null;
-      this.tasks = [];
-      this.showHome();
-    }
-  }
-
-  showLoadingMessage(message) {
-    const messageDiv = document.createElement('div');
-    messageDiv.id = 'message-notification';
-    messageDiv.style.cssText = `
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      background-color: #2e81d1;
-      color: white;
-      padding: 16px 24px;
-      border-radius: 8px;
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-      z-index: 1000;
-      font-weight: 600;
-    `;
-    messageDiv.textContent = message;
-    document.body.appendChild(messageDiv);
-  }
-
-  showErrorMessage(message) {
-    this.clearMessages();
-    const messageDiv = document.createElement('div');
-    messageDiv.id = 'message-notification';
-    messageDiv.style.cssText = `
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      background-color: #dc3545;
-      color: white;
-      padding: 16px 24px;
-      border-radius: 8px;
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-      z-index: 1000;
-      font-weight: 600;
-    `;
-    messageDiv.textContent = message;
-    document.body.appendChild(messageDiv);
-    setTimeout(() => this.clearMessages(), 5000);
-  }
-
-  showSuccessMessage(message) {
-    this.clearMessages();
-    const messageDiv = document.createElement('div');
-    messageDiv.id = 'message-notification';
-    messageDiv.style.cssText = `
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      background-color: #28a745;
-      color: white;
-      padding: 16px 24px;
-      border-radius: 8px;
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-      z-index: 1000;
-      font-weight: 600;
-    `;
-    messageDiv.textContent = message;
-    document.body.appendChild(messageDiv);
-    setTimeout(() => this.clearMessages(), 5000);
-  }
-
-  clearMessages() {
-    const existingMessage = document.getElementById('message-notification');
-    if (existingMessage) {
-      existingMessage.remove();
-    }
+  logout() {
+    this.tasks = ['Finish homework', 'Call John', 'Buy groceries']; // Reset to default tasks
+    this.showHome();
   }
 
   saveTasks() {
