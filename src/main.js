@@ -1,17 +1,44 @@
 import './style.css'
+import { supabase } from './supabase.js'
 
-// Task Manager Application
 class TaskManager {
   constructor() {
     this.tasks = JSON.parse(localStorage.getItem('tasks')) || [];
     this.currentView = 'home';
     this.editingTaskId = null;
+    this.currentUser = null;
     this.init();
   }
 
-  init() {
+  async init() {
+    await this.checkSession();
     this.render();
     this.bindEvents();
+    this.setupAuthListener();
+  }
+
+  async checkSession() {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
+      this.currentUser = session.user;
+      if (this.currentView === 'home' || this.currentView === 'login' || this.currentView === 'signup') {
+        this.currentView = 'dashboard';
+      }
+    }
+  }
+
+  setupAuthListener() {
+    supabase.auth.onAuthStateChange((event, session) => {
+      (async () => {
+        if (event === 'SIGNED_IN' && session) {
+          this.currentUser = session.user;
+          this.showDashboard();
+        } else if (event === 'SIGNED_OUT') {
+          this.currentUser = null;
+          this.showHome();
+        }
+      })();
+    });
   }
 
   bindEvents() {
@@ -563,32 +590,66 @@ class TaskManager {
     }
   }
 
-  handleLogin() {
+  async handleLogin() {
     const form = document.getElementById('login-form');
     const formData = new FormData(form);
     const email = formData.get('email');
     const password = formData.get('password');
 
-    // Simple validation - in a real app, this would connect to a backend
     if (email && password) {
-      console.log('Login attempt:', { email, password });
-      // For demo purposes, redirect to dashboard
-      this.showDashboard();
+      const submitBtn = form.querySelector('button[type="submit"]');
+      const originalText = submitBtn.textContent;
+      submitBtn.textContent = 'Logging in...';
+      submitBtn.disabled = true;
+
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      if (error) {
+        alert(`Login failed: ${error.message}`);
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
+      } else {
+        this.currentUser = data.user;
+        this.showDashboard();
+      }
     }
   }
 
-  handleSignup() {
+  async handleSignup() {
     const form = document.getElementById('signup-form');
     const formData = new FormData(form);
     const name = formData.get('name');
     const email = formData.get('email');
     const password = formData.get('password');
 
-    // Simple validation - in a real app, this would connect to a backend
     if (name && email && password) {
-      console.log('Signup attempt:', { name, email, password });
-      // For demo purposes, redirect to dashboard
-      this.showDashboard();
+      const submitBtn = form.querySelector('button[type="submit"]');
+      const originalText = submitBtn.textContent;
+      submitBtn.textContent = 'Creating account...';
+      submitBtn.disabled = true;
+
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            name: name
+          }
+        }
+      });
+
+      if (error) {
+        alert(`Sign up failed: ${error.message}`);
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
+      } else {
+        this.currentUser = data.user;
+        alert('Account created successfully!');
+        this.showDashboard();
+      }
     }
   }
 
@@ -604,9 +665,15 @@ class TaskManager {
     }
   }
 
-  logout() {
-    this.tasks = ['Finish homework', 'Call John', 'Buy groceries']; // Reset to default tasks
-    this.showHome();
+  async logout() {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      alert(`Logout failed: ${error.message}`);
+    } else {
+      this.currentUser = null;
+      this.tasks = [];
+      this.showHome();
+    }
   }
 
   saveTasks() {
